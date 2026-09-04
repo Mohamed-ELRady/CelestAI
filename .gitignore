@@ -1,0 +1,12 @@
+.venv/
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+celestai-output/
+.env
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/

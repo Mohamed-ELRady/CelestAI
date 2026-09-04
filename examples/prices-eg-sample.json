@@ -1,0 +1,22 @@
+{
+  "_comment_ar": "جدول أسعار نموذجي للتجربة — الأرقام دي مش أسعار سوق حقيقية ومينفعش تُستخدم في تسعير فعلي. حط أسعارك أنت. الأداة عمرها ما بتاخد سعر من ذاكرة الموديل.",
+  "_comment_en": "SAMPLE price book for testing only. These are NOT real market rates and must not be used for actual pricing. Supply your own. The tool never takes a price from the model's memory.",
+  "currency": "EGP",
+  "source": "نموذج للتجربة — غير حقيقي / sample, not real",
+  "date": "2026-01-01",
+  "rates": {
+    "BLK-EXT": 2400,
+    "BLK-INT": 2100,
+    "PLS": 180,
+    "FLR-DRY": 650,
+    "FLR-WET": 900,
+    "CLG": 220,
+    "SKT": 120,
+    "DR-INT": 4500,
+    "DR-MAIN": 12000,
+    "WIN": 2800,
+    "ELE": 350,
+    "PLB": 900,
+    "BAL": 700
+  }
+}

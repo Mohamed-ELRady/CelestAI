@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "celestai"
+version = "0.2.0"
+description = "Hybrid AI + deterministic geometry engine for code-checked architectural floor plans"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mohamed Elrady" }]
+keywords = ["architecture", "floor-plan", "generative-design", "cad", "dxf", "ai", "groq", "openrouter", "gemini", "ollama"]
+
+dependencies = [
+    "anthropic>=0.116",
+    "openai>=1.0",
+    "python-dotenv>=1.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "ezdxf>=1.3",
+    "reportlab>=4.2",
+    "arabic-reshaper>=3.0",
+    "python-bidi>=0.4",
+    "python-multipart>=0.0.9",
+    "keyring>=25.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-xdist>=3.5"]
+
+[project.scripts]
+celestai = "celestai.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Mohamed-ELRady/CelestAI"
+Repository = "https://github.com/Mohamed-ELRady/CelestAI"
+Issues = "https://github.com/Mohamed-ELRady/CelestAI/issues"
+
+[tool.setuptools.packages.find]
+include = ["celestai*"]
+
+[tool.setuptools.package-data]
+celestai = ["web/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

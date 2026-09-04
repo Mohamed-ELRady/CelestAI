@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "celestai-web",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["-m", "uvicorn", "celestai.api:app", "--host", "127.0.0.1", "--port", "8770", "--reload"],
+      "port": 8770
+    }
+  ]
+}
