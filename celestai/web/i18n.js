@@ -35,6 +35,9 @@ export const STRINGS = {
     modelsAvailable: "{count} موديل متاح",
     settingsSaved: "تم الحفظ والتفعيل",
     secureStorageUnavailable: "الحفظ الدائم غير متاح على هذا النظام؛ سيظل المفتاح في الجلسة الحالية فقط.",
+    smartSavingsTitle: "توفير ذكي مفعّل تلقائيًا",
+    smartSavingsBody: "الطلبات المتطابقة تستخدم نفس الرد الناجح من ذاكرة التشغيل، وJSON يُرسل بصيغة مضغوطة. لا تغيير للموديل أو مستوى الجودة، ولا تخزين للطلبات على القرص.",
+    smartSavingsStats: "تم توفير {count} استدعاء API في الجلسة · إعادة استخدام {rate}%",
 
     modeUnit: "وحدة واحدة",
     modeBuilding: "مبنى متعدد الأدوار",
@@ -238,6 +241,9 @@ export const STRINGS = {
     modelsAvailable: "{count} models available",
     settingsSaved: "Saved and activated",
     secureStorageUnavailable: "Persistent storage is unavailable on this system; the key will stay in this server session only.",
+    smartSavingsTitle: "Smart savings enabled automatically",
+    smartSavingsBody: "Identical requests reuse the same successful in-memory response, while JSON is sent compactly. The model and quality settings stay unchanged, and requests are never cached to disk.",
+    smartSavingsStats: "{count} API call(s) saved this session · {rate}% reuse",
 
     modeUnit: "Single unit",
     modeBuilding: "Multi-storey building",

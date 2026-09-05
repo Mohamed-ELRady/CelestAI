@@ -328,6 +328,11 @@ def test_telemetry_counts_and_resets():
     assert snap["calls"] == 3 and snap["failures"] == 1 and snap["repairs"] == 1
     assert snap["failure_rate"] == pytest.approx(1 / 3, abs=1e-3)
     assert snap["tasks"] == {"review": 2, "chat": 1}
+    telemetry.record_cache("anthropic", "review")
+    snap = telemetry.snapshot()["anthropic"]
+    assert snap["requests"] == 4
+    assert snap["api_calls"] == 3
+    assert snap["api_calls_saved"] == 1
     telemetry.reset()
     assert telemetry.snapshot() == {}
 

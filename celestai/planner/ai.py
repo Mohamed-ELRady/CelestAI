@@ -14,11 +14,14 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from typing import Optional
 
 from ..knowledge import HABITABLE, WET_ROOMS, profile, standard
 from ..models import ArchitecturalProgram, DesignRequest, RoomKind, RoomSpec
 from ..ai import settings
+from ..ai.cache import response_cache, response_cache_key
+from ..ai.client import telemetry
 from . import rules
 from .prompts import SYSTEM, openai_schema_suffix, user_prompt
 
@@ -298,12 +301,38 @@ def build_program(
         .replace("{notes_language}",
                  "English" if req.lang_key == "en" else "Egyptian Arabic")
     )
+    prompt = user_prompt(req, usable_area, plot_w, plot_d)
 
     try:
-        if _provider() == "openai":
-            program = _build_program_openai(req, system, usable_area, plot_w, plot_d)
+        config = settings.current()
+        resolved_model = _openai_model() if _provider() == "openai" else req.model
+        cache_key = response_cache_key(
+            kind="structured",
+            system=system,
+            user=prompt,
+            model=resolved_model,
+            max_tokens=16000,
+            effort="high",
+            output_schema=ArchitecturalProgram.model_json_schema(),
+        )
+        cached = response_cache.get(cache_key)
+        if cached is not None:
+            telemetry.record_cache(config.provider_id, "planner")
+            program = ArchitecturalProgram.model_validate_json(cached)
         else:
-            program = _build_program_anthropic(req, system, usable_area, plot_w, plot_d)
+            started = time.time()
+            try:
+                if _provider() == "openai":
+                    program = _build_program_openai(req, system, usable_area, plot_w, plot_d)
+                else:
+                    program = _build_program_anthropic(req, system, usable_area, plot_w, plot_d)
+            except Exception:
+                telemetry.record(
+                    config.provider_id, "planner", time.time() - started, failed=True,
+                )
+                raise
+            telemetry.record(config.provider_id, "planner", time.time() - started)
+            response_cache.put(cache_key, program.model_dump_json())
         program.source = "ai"
         return sanitise(program, req), None
 

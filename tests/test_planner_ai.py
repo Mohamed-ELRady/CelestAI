@@ -370,8 +370,10 @@ def _fake_openai_client(content: str):
     class _Completions:
         def __init__(self, content):
             self._content = content
+            self.calls = 0
 
         def create(self, **kwargs):
+            self.calls += 1
             return _Response(self._content)
 
     class _Chat:
@@ -415,6 +417,25 @@ def test_build_program_via_openai_compatible_provider(monkeypatch):
     assert warning is None
     assert program.source == "ai"
     assert program.rooms[0].kind in HUB_KINDS
+
+
+def test_planner_reuses_an_identical_successful_response(monkeypatch):
+    """تكرار نفس التصميم يحفظ استدعاء كامل من غير تغيير البرنامج الناتج."""
+    import celestai.planner.ai as ai
+
+    monkeypatch.setenv("CELESTAI_AI_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "gsk_fake")
+    monkeypatch.setenv("CELESTAI_AI_MODEL", "llama-3.3-70b-versatile")
+
+    fake_client = _fake_openai_client(_canned_program_json())
+    monkeypatch.setattr(ai, "_openai_client", lambda: fake_client)
+
+    first, first_warning = ai.build_program(REQ, 120.0, 13.0, 9.2)
+    second, second_warning = ai.build_program(REQ, 120.0, 13.0, 9.2)
+
+    assert first_warning is None and second_warning is None
+    assert first.model_dump() == second.model_dump()
+    assert fake_client.chat.completions.calls == 1
 
 
 def test_build_program_via_openai_wraps_json_in_markdown_fences(monkeypatch):

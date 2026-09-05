@@ -13,6 +13,7 @@ from .client import (
     active_provider_label,
     telemetry,
 )
+from .cache import response_cache
 
 __all__ = [
     "AIUnavailable",
@@ -21,4 +22,5 @@ __all__ = [
     "credentials_available",
     "active_provider_label",
     "telemetry",
+    "response_cache",
 ]

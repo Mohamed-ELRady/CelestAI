@@ -274,6 +274,10 @@ function renderProviderSettings(initial) {
   ].join("");
   $("providerSummary").innerHTML =
     `<div class="provider-summary-head">${escapeHtml(name)} ${pills}</div>${escapeHtml(description)}`;
+  const savings = aiSettingsState.savings || {};
+  $("aiSavingsStats").textContent = t("smartSavingsStats")
+    .replace("{count}", savings.api_calls_saved || 0)
+    .replace("{rate}", Math.round((savings.reuse_rate || 0) * 100));
 
   $("apiKeyField").hidden = !provider.requires_key;
   $("aiApiKey").value = "";

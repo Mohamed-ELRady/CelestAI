@@ -24,6 +24,7 @@ from typing import Any, Optional, Type, TypeVar
 from pydantic import BaseModel, ValidationError
 
 from . import settings
+from .cache import compact_json, response_cache, response_cache_key
 
 log = logging.getLogger("celestai.ai")
 
@@ -90,6 +91,7 @@ def supports_vision() -> bool:
 @dataclass
 class ProviderStats:
     calls: int = 0
+    cache_hits: int = 0
     failures: int = 0
     repairs: int = 0          # ردود احتاجت تصحيح (JSON مكسور، حقول ناقصة…)
     total_seconds: float = 0.0
@@ -97,14 +99,21 @@ class ProviderStats:
 
     def as_dict(self) -> dict:
         ok = self.calls - self.failures
+        requests = self.calls + self.cache_hits
         return {
             "calls": self.calls,
+            "api_calls": self.calls,
+            "requests": requests,
+            "cache_hits": self.cache_hits,
+            "api_calls_saved": self.cache_hits,
             "ok": ok,
+            "successful_requests": ok + self.cache_hits,
             "failures": self.failures,
             "repairs": self.repairs,
             "failure_rate": round(self.failures / self.calls, 3) if self.calls else 0.0,
             "repair_rate": round(self.repairs / self.calls, 3) if self.calls else 0.0,
             "avg_seconds": round(self.total_seconds / self.calls, 2) if self.calls else 0.0,
+            "reuse_rate": round(self.cache_hits / requests, 3) if requests else 0.0,
             "tasks": dict(self.tasks),
         }
 
@@ -133,6 +142,12 @@ class _Telemetry:
     def snapshot(self) -> dict[str, dict]:
         with self._lock:
             return {k: v.as_dict() for k, v in self._by_provider.items()}
+
+    def record_cache(self, name: str, task: str) -> None:
+        with self._lock:
+            st = self._by_provider.setdefault(name, ProviderStats())
+            st.cache_hits += 1
+            st.tasks[task] = st.tasks.get(task, 0) + 1
 
     def reset(self) -> None:
         with self._lock:
@@ -195,7 +210,7 @@ def strip_json_fences(text: str) -> tuple[str, bool]:
 
 
 def _schema_suffix(model: Type[BaseModel]) -> str:
-    schema = json.dumps(model.model_json_schema(), ensure_ascii=False)
+    schema = compact_json(model.model_json_schema())
     return (
         "\n\n## Output format (STRICT — overrides any format guidance above)\n"
         "Respond with ONLY one JSON object. No markdown fences, no prose before or "
@@ -299,15 +314,37 @@ def ask(
         raise AIUnavailable("مفيش مفتاح API متاح")
 
     images = validate_images(images)
-    name = provider()
+    config = settings.current()
+    adapter = config.adapter
+    name = config.provider_id
+    resolved_model = (
+        _openai_model()
+        if adapter == "openai"
+        else model or config.model or DEFAULT_MODEL
+    )
+    cache_key = response_cache_key(
+        kind="structured",
+        system=system,
+        user=user,
+        model=resolved_model,
+        max_tokens=max_tokens,
+        effort=effort,
+        output_schema=output_model.model_json_schema(),
+        images=((img.media_type, img.data) for img in images),
+    )
+    cached = response_cache.get(cache_key)
+    if cached is not None:
+        telemetry.record_cache(name, task)
+        return output_model.model_validate_json(cached)
+
     t0 = time.time()
     repaired = False
 
     try:
-        if name == "openai":
+        if adapter == "openai":
             client = _openai_client()
             response = client.chat.completions.create(
-                model=_openai_model(),
+                model=resolved_model,
                 messages=[
                     {"role": "system", "content": system + _schema_suffix(output_model)},
                     {"role": "user", "content": _openai_content(user, images)},
@@ -342,6 +379,7 @@ def ask(
             if parsed is None:
                 raise AIUnavailable("الموديل مرجّعش مخرج صالح")
 
+        response_cache.put(cache_key, parsed.model_dump_json())
         telemetry.record(name, task, time.time() - t0, repaired=repaired)
         return parsed
 
@@ -368,14 +406,34 @@ def ask_text(
         raise AIUnavailable("مفيش مفتاح API متاح")
 
     images = validate_images(images)
-    name = provider()
+    config = settings.current()
+    adapter = config.adapter
+    name = config.provider_id
+    resolved_model = (
+        _openai_model()
+        if adapter == "openai"
+        else model or config.model or DEFAULT_MODEL
+    )
+    cache_key = response_cache_key(
+        kind="text",
+        system=system,
+        user=user,
+        model=resolved_model,
+        max_tokens=max_tokens,
+        images=((img.media_type, img.data) for img in images),
+    )
+    cached = response_cache.get(cache_key)
+    if cached is not None:
+        telemetry.record_cache(name, task)
+        return cached
+
     t0 = time.time()
 
     try:
-        if name == "openai":
+        if adapter == "openai":
             client = _openai_client()
             response = client.chat.completions.create(
-                model=_openai_model(),
+                model=resolved_model,
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": _openai_content(user, images)},
@@ -385,7 +443,7 @@ def ask_text(
         else:
             client = _anthropic_client()
             response = client.messages.create(
-                model=model or settings.current().model or DEFAULT_MODEL,
+                model=resolved_model,
                 max_tokens=max_tokens,
                 system=[{
                     "type": "text", "text": system,
@@ -399,6 +457,7 @@ def ask_text(
 
         if not out:
             raise AIUnavailable("الموديل رجّع رد فاضي")
+        response_cache.put(cache_key, out)
         telemetry.record(name, task, time.time() - t0)
         return out
 

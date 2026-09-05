@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import json
-
 from ..knowledge import STANDARDS
 from ..models import ArchitecturalProgram, DesignRequest
+from ..ai.cache import compact_json
 
 
 def _standards_table() -> str:
@@ -60,7 +59,7 @@ def openai_schema_suffix() -> str:
     ضمان مماثل لأي مزوّد تاني (Groq وغيره)، فبنحط شكل الـ JSON صراحة في البرومبت
     ونتحقق من الرد بعدين بـ Pydantic في `ai.py`.
     """
-    schema = json.dumps(ArchitecturalProgram.model_json_schema(), ensure_ascii=False)
+    schema = compact_json(ArchitecturalProgram.model_json_schema())
     return (
         "\n\n## Output format (STRICT — this overrides everything above about format)\n"
         "Respond with ONLY a single JSON object. No markdown code fences, no prose "

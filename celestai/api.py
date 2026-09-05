@@ -17,6 +17,7 @@ from . import __version__
 from .knowledge import PROFILES
 from .models import BuildingRequest, DesignRequest
 from .ai.client import active_provider_label, credentials_available
+from .ai.cache import response_cache
 from .ai import settings as ai_settings
 from .service import (
     generate,
@@ -165,6 +166,7 @@ def get_ai_settings() -> dict[str, Any]:
     """إعدادات آمنة للعرض — مفتاح الـ API نفسه لا يخرج من الخادم أبدًا."""
     state = ai_settings.public_state()
     state["ai_available"] = credentials_available()
+    state["savings"] = response_cache.snapshot()
     return state
 
 
@@ -176,14 +178,17 @@ def save_ai_settings(payload: AISettingsIn) -> dict[str, Any]:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     state = ai_settings.public_state()
     state["ai_available"] = credentials_available()
+    state["savings"] = response_cache.snapshot()
     return state
 
 
 @app.delete("/api/ai/settings")
 def disconnect_ai() -> dict[str, Any]:
     ai_settings.disconnect(forget_saved=True)
+    response_cache.clear()
     state = ai_settings.public_state()
     state["ai_available"] = False
+    state["savings"] = response_cache.snapshot()
     return state
 
 
@@ -738,7 +743,7 @@ def telemetry_endpoint() -> dict:
     """جودة كل مزوّد بالأرقام — كام استدعاء، كام فشل، كام تصحيح."""
     from .ai.client import telemetry
 
-    return {"providers": telemetry.snapshot()}
+    return {"providers": telemetry.snapshot(), "savings": response_cache.snapshot()}
 
 
 @app.get("/api/style")

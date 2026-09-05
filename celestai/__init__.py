@@ -4,7 +4,7 @@ CelestAI turns a plot area (plus an optional free-text brief) into a
 dimensioned architectural floor plan: SVG, PDF, DXF, 3D and a written report.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 
 def _load_env_file() -> None:
